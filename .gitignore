@@ -127,3 +127,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+1000meg.test
+1000meg.test.ckpnt
+.pypirc
