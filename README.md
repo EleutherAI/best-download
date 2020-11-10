@@ -9,7 +9,7 @@ pip install best-download
 ```
 
 ## Basic Example
-The following example can be found in "examples/basic_example.py".
+The following example can be found in "examples/basic_example.py". Replace the url with a local speed test server if desired.
 
 ```python
 from best_download import download_file
