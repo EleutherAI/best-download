@@ -15,7 +15,7 @@ def get_url_content_length(url):
     response.raise_for_status()
 
     if "Content-Length" in response.headers:
-        if response.headers.get("Content-Encoding") != "gzip":
+        if response.headers.get("Content-Encoding") not in ("gzip","deflate"):
             return int(response.headers['Content-length'])
     else:
         return None
