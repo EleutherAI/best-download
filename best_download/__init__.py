@@ -15,7 +15,8 @@ def get_url_content_length(url):
     response.raise_for_status()
 
     if "Content-Length" in response.headers:
-        return int(response.headers['Content-length'])
+        if response.headers.get("Content-Encoding") != "gzip":
+            return int(response.headers['Content-length'])
     else:
         return None
 
@@ -93,7 +94,7 @@ def download_file(url, to, checksum=None):
                     else:
                         headers=None
 
-                    with session.get(url, headers=headers, stream=True) as r, \
+                    with session.get(url, headers=headers, stream=True, timeout=5) as r, \
                          open(to, 'ab') as f:
 
                         f.seek(resume_point)
