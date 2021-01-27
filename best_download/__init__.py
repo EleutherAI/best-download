@@ -86,7 +86,7 @@ def download_file(url, to, checksum=None):
             with tqdm(total=expected_size, unit="byte", unit_scale=1) as progress:
                 try:
                     # Support resuming
-                    if os.path.exists(to):
+                    if os.path.exists(to) and expected_size:
                         tqdm.write("File already exists, resuming download.")
                         headers = {}
                         headers["Range"] = f"bytes={resume_point}-"
