@@ -11,9 +11,11 @@ import rehash
 from tqdm import tqdm
 
 def get_url_content_length(url):
-    response = requests.head(url)
-    response.raise_for_status()
-
+    try:
+        response = requests.head(url)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError:
+        return None
     if "Content-Length" in response.headers:
         if response.headers.get("Content-Encoding") not in ("gzip","deflate"):
             return int(response.headers['Content-length'])
@@ -67,15 +69,27 @@ def download_file(url, to, checksum=None):
                                 sys.exit(0)
                             temp_checksum.update(byte_block)
 
-                if expected_size and os.path.getsize(to) != expected_size:
+                if expected_size is not None and os.path.getsize(to) != expected_size:
+                    tqdm.write('Resuming unfinished download')
                     pass # Will resume below
                 else:
                     # No size info or full size
                     if checksum:
-                        if temp_checksum.hexdigest() == checksum:
+                        computed = temp_checksum.hexdigest()
+                        tqdm.write(f'computed checksum {computed}')
+                        if computed == checksum:
                             tqdm.write(f"Checksum OK")
                             return
                         else:
+                            tqdm.write('Checksum failed')
+                            try:
+                                os.remove(to)
+                            except OSError:
+                                pass
+                            try:
+                                os.remove(download_checkpoint)
+                            except OSError:
+                                pass
                             fail_count += 1
                     else:
                         tqdm.write("Comparison checksum not available")
@@ -83,41 +97,55 @@ def download_file(url, to, checksum=None):
                         return
 
             chunk_size = 1024*1024
-            with tqdm(total=expected_size, unit="byte", unit_scale=1) as progress:
+
+            if fail_count == max_retries - 1:
                 try:
-                    # Support resuming
-                    if os.path.exists(to) and expected_size:
-                        tqdm.write("File already exists, resuming download.")
-                        headers = {}
-                        headers["Range"] = f"bytes={resume_point}-"
-                        progress.update(resume_point)
-                    else:
-                        headers=None
-
-                    with session.get(url, headers=headers, stream=True, timeout=5) as r, \
-                         open(to, 'ab') as f:
-
-                        f.seek(resume_point)
-                        r.raise_for_status()
-                        for chunk in r.iter_content(chunk_size):
-                            if terminate:
-                                sys.exit(0)
-
+                    # fallback: no resume
+                    tqdm.write('falling back to no resume')
+                    with session.get(url, stream=True, timeout=5) as r, \
+                         open(to, 'wb') as f:
+                        for chunk in r.raw.stream(chunk_size, decode_content=False) if url.split('?')[0].endswith('.gz') else r.iter_content(chunk_size):
                             f.write(chunk)
-
-                            chunk_length = len(chunk)                        
-                            resume_point += chunk_length
-                            temp_checksum.update(chunk)                        
-                            pickle.dump((resume_point, temp_checksum), open(download_checkpoint,"wb"))
-
-                            progress.update(chunk_length)
-
-                except Exception as ex:
-                    tqdm.write(f"Download error: {ex}")
+                except Exception:
                     fail_count += 1
+            else:
+                with tqdm(total=expected_size, unit="byte", unit_scale=1) as progress:
+                    try:
+                        # Support resuming
+                        if os.path.exists(to) and expected_size:
+                            tqdm.write("File already exists, resuming download.")
+                            headers = {}
+                            headers["Range"] = f"bytes={resume_point}-"
+                            progress.update(resume_point)
+                        else:
+                            headers=None
+
+                        with session.get(url, headers=headers, stream=True, timeout=5) as r, \
+                            open(to, 'ab') as f:
+
+                            f.seek(resume_point)
+                            r.raise_for_status()
+                            for chunk in r.raw.stream(chunk_size, decode_content=False) if url.split('?')[0].endswith('.gz') else r.iter_content(chunk_size):
+                                if terminate:
+                                    sys.exit(0)
+
+                                f.write(chunk)
+
+                                chunk_length = len(chunk)                        
+                                resume_point += chunk_length
+                                temp_checksum.update(chunk)                        
+                                pickle.dump((resume_point, temp_checksum), open(download_checkpoint,"wb"))
+
+                                progress.update(chunk_length)
+
+                    except Exception as ex:
+                        tqdm.write(f"Download ersor: {ex}")
+                        fail_count += 1
+                        import traceback
+                        traceback.print_exc()
                 
             if fail_count == max_retries:
-                raise Exception("Download failed")
+                    raise Exception("Download failed")
     finally:
         if terminate:
             tqdm.write('SIGINT or CTRL-C detected, stopping.')
