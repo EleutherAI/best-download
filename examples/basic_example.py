@@ -6,7 +6,8 @@ tests.append(("http://speedcheck.cdn.on.net/100meg.test", "100meg.test",
 tests.append(("http://speedcheck.cdn.on.net/1000meg.test", "1000meg.test",
     "cfab8f3761126268a6715f90796a68074c3f57c3af48e0101776d211e7b5139e"))
 
-print(tests)
+# Github example doesn't support resuming
+tests.append(("https://github.com/Nealcly/MuTual/archive/master.zip", "master.zip", None))
 
 def main():
     url, local_file_path, checksum = tests[0]
