@@ -55,7 +55,7 @@ def download_file_full(url, local_file, content_length):
         headers = {"Accept-Encoding": "identity"} # Avoid dealing with gzip
         with tqdm(total=content_length, unit="byte", unit_scale=1) as progress, \
              session.get(url, headers=headers, stream=True, timeout=5) as response, \
-             open(local_file, 'b') as file_out:
+             open(local_file, 'wb') as file_out:
 
             response.raise_for_status()
 
