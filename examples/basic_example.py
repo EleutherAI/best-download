@@ -9,6 +9,10 @@ tests.append(("http://speedcheck.cdn.on.net/1000meg.test", "1000meg.test",
 # Github example doesn't support resuming
 tests.append(("https://github.com/Nealcly/MuTual/archive/master.zip", "master.zip", None))
 
+# Testing Accept-Encoding: identity (no gzip)
+tests.append(("https://raw.githubusercontent.com/openai/gpt-3/master/data/two_digit_addition.jsonl",
+             "two_digit_addition.jsonl", "75a54b7a3db3b23369df74fe440c23025f3d3c51f664300bd3d56632b2617b3d"))
+
 def main():
     url, local_file_path, checksum = tests[0]
 
