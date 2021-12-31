@@ -200,5 +200,5 @@ def download_file(urls, expected_checksum=None, local_file=None, local_directory
         raise ex
     except Exception as ex: 
         logger.info(f"Unexpected Error: {ex}") # Only from block above
-    finally:
-        return success
+    
+    return success
