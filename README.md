@@ -21,7 +21,35 @@ pytest
 pip install best-download
 ```
 
-## Basic Example
+##  Quickstart
+```python
+from best_download import download_file
+
+url = "http://ipv4.download.thinkbroadband.com/10MB.zip"
+checksum = "d076d819249a9827c8a035bb059498bf49f391a989a1f7e166bc70d028025135"
+local_file = "10MB.zip"
+try:
+  success = download_file(url, local_file=local_file, expected_checksum=checksum)
+except KeyboardInterrupt:
+  print("Ctrl-C (SIGINT) is passed up")
+```
+
+## API
+There's only one entry point: 
+
+```python
+def download_file(urls, expected_checksum=None, local_file=None, local_directory=None, max_retries=3)
+```
+
+| Parameter      | Description |
+| -----------: | ----------- |
+| `urls` | Either a single url or a list of urls to iterate over if failover required. |
+| `expected_checksum` | (Optional) Checksum to validate against after download complete. Will not validate if not provided. |
+| `local_file` | (Optional) Output path for saving the file. If not provided we default to the url basepath. | 
+| `local_directory` | (Optional) If provided will be prepended to *local_file*. Mainly useful for downloading to a directory and using automatic local_file. |
+| `max_retries` | (Default: 3) Number of retry attmpts per url (per failover if list is provided). |
+
+## Examples
 The following example can be found in "examples/basic_example.py". There are some example urls in the tests array, including test cases for a server not supporting ranges (github) and a server defaulting to gzip encoding which we don't use. We demo resuming at the end.
 
 ```python
