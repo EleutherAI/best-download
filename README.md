@@ -22,7 +22,7 @@ pip install best-download
 ```
 
 ## Basic Example
-The following example can be found in "examples/basic_example.py". There are some example urls in the tests array, including a test case for a server not supporting ranges (github).
+The following example can be found in "examples/basic_example.py". There are some example urls in the tests array, including a test cases for a server not supporting ranges (github) and a server defaulting to gzip encoding which we don't use.
 
 ```python
 import os
