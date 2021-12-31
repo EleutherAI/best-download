@@ -1,4 +1,5 @@
 # best-download
+![python badge](https://github.com/EleutherAI/best-download/actions/workflows/python-app.yml/badge.svg)  
 URL downloader supporting checkpointing and continuous checksumming.
 
 NOTE: When the local_file already exists we automatically overwrite unless there is a checkpoint file there. When the download successfully completes the checkpoint will be deleted and True returned. This avoids leaving rubbish in the file system or doing full checksum calculations for large files. You will need to manage existing files if your scripts are re-runnable, either maintain your own database/done files or do a manual checksum.
