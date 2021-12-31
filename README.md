@@ -10,7 +10,7 @@ NOTE: When the local_file already exists we automatically overwrite unless there
 - Added *local_directory* option, will be prepended to *local_file*. Mainly useful
   for downloading to a directory and using automatic local_file
 3. Improved SIGINT handling. We now raise a KeyboardInterrupt exception after handling it safely internally.
-4. Added a decent set of tests run:
+4. Added a decent set of tests:
 ```
 pip install -r requirements-dev.txt
 pytest
