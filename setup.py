@@ -19,9 +19,9 @@ install_requires = ["requests", "rehash", "tqdm"]
 
 setuptools.setup(
     name="best-download",
-    version="0.0.9",
+    version="1.0.0",
     author="researcher2",
-    author_email="2researcher2@gmail.com",
+    author_email="contact@eleuther.ai",
     description="URL downloader supporting checkpointing and continuous checksumming.",
     long_description=long_description,
     long_description_content_type="text/markdown",
