@@ -15,7 +15,7 @@ with io_open(requirements_dev, mode='r') as fd:
                              for i in fd.read().strip().split('\n')]
 
 
-install_requires = ["requests", "rehash", "tqdm"]
+install_requires = ["requests", "tqdm"]
 
 setuptools.setup(
     name="best-download",

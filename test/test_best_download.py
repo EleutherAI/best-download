@@ -49,12 +49,12 @@ class NoHeadHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         logger.info("raw server get")
         self.send_response(302)
-        self.send_header("Location", "http://localhost:5000/no_head")
+        self.send_header("Location", "http://localhost:6000/no_head")
         self.end_headers()
 
 def server_no_head():
     hostName = "localhost"
-    serverPort = 5001
+    serverPort = 6001
 
     webServer = HTTPServer((hostName, serverPort), NoHeadHandler)
     logger.info("Server started http://%s:%s" % (hostName, serverPort))
@@ -166,7 +166,7 @@ class AcceptRangesHandler(BaseHTTPRequestHandler):
 
 def server_accept_ranges():
     hostName = "localhost"
-    serverPort = 5001
+    serverPort = 6001
 
     webServer = HTTPServer((hostName, serverPort), AcceptRangesHandler)
     logger.info("Server started http://%s:%s" % (hostName, serverPort))
@@ -221,7 +221,7 @@ def flask_server():
     def no_head_test():
         return send_from_directory(file_directory, test_file_name)
 
-    app.run(debug=False)
+    app.run(debug=False, port=6000)
 
 class RunServer:
     p = None   
@@ -234,13 +234,13 @@ class RunServer:
         self.p = Process(target=self.function)
         self.p.start()
         if self.function == flask_server:
-            wait_url = "http://localhost:5000"
+            wait_url = "http://localhost:6000"
             request_func = requests.get
         elif self.function == server_no_head:
-            wait_url = "http://localhost:5001/no_head"
+            wait_url = "http://localhost:6001/no_head"
             request_func = requests.head
         elif self.function == server_accept_ranges:
-            wait_url = "http://localhost:5001/100mb.test"
+            wait_url = "http://localhost:6001/100mb.test"
             request_func = requests.head
 
         logger.info(f"Polling for server startup {wait_url}...")
@@ -274,13 +274,13 @@ def test_chunking(test_100mb_file):
 def test_flask_server():
     logger.info("testing flask server")
     with RunServer(function=flask_server) as fs:
-        url = "http://localhost:5000"
+        url = "http://localhost:6000"
         result = requests.get(url)
         assert(result.text == hello_world_text)
 
 def test_server_no_head():
     with RunServer(function=server_no_head) as s:
-        url = "http://localhost:5001/no_head"
+        url = "http://localhost:6001/no_head"
         result = requests.head(url)
         assert(result.status_code == 503)
 
@@ -289,13 +289,13 @@ def test_server_accept_ranges(test_100mb_file):
     with RunServer(function=server_accept_ranges) as s:
         file_size = os.path.getsize(test_file_path)
 
-        url = "http://localhost:5001/100mb.test"
+        url = "http://localhost:6001/100mb.test"
         result = requests.head(url)
         assert result.status_code == 200
         assert result.headers["Accept-Ranges"] == "bytes"
         assert result.headers["Content-Length"] == str(file_size)
 
-        url = "http://localhost:5001/100mb.test"
+        url = "http://localhost:6001/100mb.test"
         headers = {"Range":f"bytes=0-"} # Start of range
 
         result = requests.get(url) # No headers
@@ -371,7 +371,7 @@ def test_accept_ranges(expected_checksum):
     logger.info(f"Expected Checksum: {expected_checksum}")        
 
     with RunServer(function=server_accept_ranges) as fs:
-        url = "http://localhost:5001/100mb.test"
+        url = "http://localhost:6001/100mb.test"
         assert download_file(url, expected_checksum=expected_checksum, local_file=test_file_name)
         assert os.path.exists(test_file_name)
         os.remove(test_file_name)
@@ -386,21 +386,19 @@ def test_interrupted_resume(expected_checksum):
     with RunServer(function=server_accept_ranges) as fs:
 
         # Sets a flag in fancy server for next request
-        url = "http://localhost:5001/go_slow"
+        url = "http://localhost:6001/go_slow"
         result = requests.get(url)
         assert result.status_code == 200
 
-        url = "http://localhost:5001/100mb.test"
+        url = "http://localhost:6001/100mb.test"
         download_process = Process(target=do_download, args=(url, test_file_name, expected_checksum, download_result))
         download_process.start()
         time.sleep(2.5) # Leave block half way through and kill server
+        download_process.kill()
 
-    time.sleep(2) # I think the fancy server needs some time between startups (port lock?)
-
-    # Restart server
-    with RunServer(function=server_accept_ranges) as fs:
-        logger.info("Attempting join")
-        download_process.join(timeout=30)
+        download_process = Process(target=do_download, args=(url, test_file_name, expected_checksum, download_result))
+        download_process.start()
+        download_process.join(timeout=30)        
         logger.info(download_result.value)
         assert(download_result.value == 1)
 
@@ -413,7 +411,7 @@ def test_interrupted(expected_checksum):
 
     result = Value('i', -1)
     with RunServer(function=flask_server) as fs:
-        url = "http://localhost:5000/slow_send_for_interrupting"
+        url = "http://localhost:6000/slow_send_for_interrupting"
         download_process = Process(target=do_download, args=(url, test_file_name, expected_checksum, result))
         download_process.start()
         time.sleep(2.5) # Leave block half way through and kill server
@@ -432,7 +430,7 @@ def test_same_url(expected_checksum, local_directory):
     logger.info(f"Expected Checksum: {expected_checksum}")        
 
     with RunServer(function=flask_server) as fs:
-        url = "http://localhost:5000/100mb.test"
+        url = "http://localhost:6000/100mb.test"
         assert download_file(url, expected_checksum=expected_checksum, local_file=test_file_name)
         assert os.path.exists(test_file_name)
         os.remove(test_file_name)
@@ -459,7 +457,7 @@ def test_different_url(expected_checksum, local_directory):
     logger.info(f"Expected Checksum: {expected_checksum}")        
 
     with RunServer(function=flask_server) as fs:
-        url = "http://localhost:5000/basic_test"
+        url = "http://localhost:6000/basic_test"
         assert download_file(url, expected_checksum=expected_checksum, local_file=test_file_name)
         assert os.path.exists(test_file_name)
         os.remove(test_file_name)
@@ -490,7 +488,7 @@ def test_multiple_urls(expected_checksum, local_directory):
 
     with RunServer(function=flask_server) as fs:
         # Test valid first url        
-        urls = ["http://localhost:5000/100mb.test", "http://localhost:5000/basic_test"]
+        urls = ["http://localhost:6000/100mb.test", "http://localhost:6000/basic_test"]
         assert download_file(urls, expected_checksum=expected_checksum, local_file=test_file_name)
         assert os.path.exists(test_file_name)
         os.remove(test_file_name)
@@ -514,7 +512,7 @@ def test_multiple_urls(expected_checksum, local_directory):
         os.remove(local_file)
 
         # Test valid first url
-        urls = ["http://localhost:5000/basic_test", "http://localhost:5000/100mb.test"]
+        urls = ["http://localhost:6000/basic_test", "http://localhost:6000/100mb.test"]
         assert download_file(urls, expected_checksum=expected_checksum, local_file=test_file_name)
         assert os.path.exists(test_file_name)
         os.remove(test_file_name)
@@ -541,7 +539,7 @@ def test_multiple_urls(expected_checksum, local_directory):
         os.remove(local_file)
 
         # Failover Test
-        urls = ["http://localhost:5000/invalid", "http://localhost:5000/100mb.test"]
+        urls = ["http://localhost:6000/invalid", "http://localhost:6000/100mb.test"]
         assert download_file(urls, expected_checksum=expected_checksum, local_file=test_file_name)
         assert os.path.exists(test_file_name)
         os.remove(test_file_name)
@@ -574,7 +572,7 @@ def test_no_head(expected_checksum):
     # No idea how to handle head requests in flask - use http.server for head and redirect on the get
     with RunServer(function=server_no_head) as s:
         with RunServer(function=flask_server) as fs:
-            url = "http://localhost:5001/no_head"
+            url = "http://localhost:6001/no_head"
             assert download_file(url, expected_checksum=expected_checksum, local_file=test_file_name)
             assert os.path.exists(test_file_name)
             os.remove(test_file_name)        

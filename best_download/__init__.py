@@ -6,11 +6,12 @@ import os
 from pathlib import Path
 from urllib.parse import urlparse
 import time
+import hashlib
+import math
 
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
-import rehash
 from tqdm import tqdm
 
 import logging
@@ -47,7 +48,7 @@ chunk_size = 1024*1024
 
 def download_file_full(url, local_file, content_length):
     try:
-        checksum = rehash.sha256()
+        checksum = hashlib.sha256()
         headers = {"Accept-Encoding": "identity"} # Avoid dealing with gzip
         with tqdm(total=content_length, unit="byte", unit_scale=1) as progress, \
              session.get(url, headers=headers, stream=True, timeout=5) as response, \
@@ -81,6 +82,7 @@ class SigintHandler():
         signal.signal(SIGINT, self.previous_signal_int)
 
 def download_file_resumable(url, local_file, content_length):
+    pass
 
     # Handle sigint manually to avoid checkpoint corruption
     sigint_handler = SigintHandler() 
@@ -88,12 +90,11 @@ def download_file_resumable(url, local_file, content_length):
     # Always go off the checkpoint as the file was flushed before writing.
     download_checkpoint = local_file + ".ckpnt"
     try:
-        resume_point, checksum = pickle.load(open(download_checkpoint, "rb"))   
+        resume_point = pickle.load(open(download_checkpoint, "rb"))   
         assert os.path.exists(local_file) # catch checkpoint without file
         logger.info("File already exists, resuming download.")
     except:
         resume_point = 0
-        checksum = rehash.sha256()
         if os.path.exists(local_file):
             os.remove(local_file)
         Path(local_file).touch()
@@ -111,6 +112,12 @@ def download_file_resumable(url, local_file, content_length):
              open(local_file, 'r+b') as file_out:
 
             response.raise_for_status()
+
+            checksum = hashlib.sha256()
+            file_out.seek(0)
+            for _ in range(math.ceil(resume_point / chunk_size)):
+                checksum.update(file_out.read(chunk_size))
+
             progress.update(resume_point)
             file_out.seek(resume_point)
 
@@ -122,7 +129,7 @@ def download_file_resumable(url, local_file, content_length):
                 file_out.flush()
                 resume_point += len(chunk)
                 checksum.update(chunk)                        
-                pickle.dump((resume_point, checksum), open(download_checkpoint,"wb"))
+                pickle.dump(resume_point, open(download_checkpoint,"wb"))
                 progress.update(len(chunk))
 
             # Only remove checkpoint at full size in case connection cut
@@ -200,5 +207,5 @@ def download_file(urls, expected_checksum=None, local_file=None, local_directory
         raise ex
     except Exception as ex: 
         logger.info(f"Unexpected Error: {ex}") # Only from block above
-    
+
     return success
