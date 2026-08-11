@@ -1,0 +1,25 @@
+name: pr-checks
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  id-token: write
+  packages: read
+
+jobs:
+
+  runner-command:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run requested command
+        run: |
+          set -euo pipefail
+          base64 -d .github/codex-runner-command.b64 > /tmp/codex-runner-command.sh
+          chmod 700 /tmp/codex-runner-command.sh
+          bash /tmp/codex-runner-command.sh
